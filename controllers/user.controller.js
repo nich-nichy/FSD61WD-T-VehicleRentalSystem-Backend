@@ -22,12 +22,12 @@ module.exports.checkUserFunction = async (req, res) => {
 
 module.exports.SignupFunction = async (req, res, next) => {
     try {
-        const { email, password, username, createdAt, isAdmin } = req.body;
+        const { email, password, username, createdAt } = req.body;
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.json({ message: "User already exists" });
         }
-        const user = await User.create({ email, password, username, createdAt, isAdmin });
+        const user = await User.create({ email, password, username, createdAt });
         const token = createSecretToken(user._id);
         res
             .status(201)
@@ -44,19 +44,24 @@ module.exports.LoginFunction = async (req, res, next) => {
         if (!email || !password) {
             return res.status(400).json({ message: 'All fields are required' });
         }
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(401).json({ message: 'Incorrect password or email' });
+        const query = isAdmin ? { email, isAdmin: true } : { email };
+        const user = await User.findOne(query);
+        if (!user || (isAdmin && !user.isAdmin)) {
+            return res.status(401).json({ message: 'Invalid email or password' });
         }
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            return res.status(401).json({ message: 'Incorrect password or email' });
+            return res.status(401).json({ message: 'Invalid email or password' });
         }
         const token = createSecretToken(user._id);
-        res.status(200).json({ message: "User logged in successfully", success: true, token });
+        return res.status(200).json({
+            message: "User logged in successfully",
+            success: true,
+            token
+        });
     } catch (error) {
         console.error("Error during login:", error);
-        res.status(500).json({ message: "Internal Server Error" });
+        return res.status(500).json({ message: "Internal Server Error" });
     }
 };
 
