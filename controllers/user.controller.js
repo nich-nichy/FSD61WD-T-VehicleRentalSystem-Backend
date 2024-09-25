@@ -4,6 +4,7 @@ const nodemailer = require('nodemailer');
 const { createSecretToken } = require("../utils/SecretToken");
 const User = require('../models/users.model');
 const { APP_URL } = process.env;
+const { userVerification } = require("../middlewares/user.middleware")
 
 module.exports.checkUserFunction = async (req, res) => {
     try {
@@ -120,6 +121,20 @@ module.exports.UpdatePasswordFunction = async (req, res, next) => {
     }
 };
 
-
+module.exports.Check = [
+    userVerification,
+    async (req, res) => {
+        try {
+            if (req.body.isAdmin) {
+                return res.status(200).json({ message: 'Welcome, Admin!' });
+            } else {
+                return res.status(200).json({ message: 'Welcome, User!' });
+            }
+        } catch (error) {
+            console.error("Error in Check:", error);
+            res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+];
 
 
