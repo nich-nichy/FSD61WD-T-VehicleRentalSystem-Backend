@@ -46,3 +46,16 @@ module.exports.totalPrice = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+module.exports.getPreBookDetails = async (req, res) => {
+    try {
+        const { user } = req.body;
+        const alreadyPreBooked = await Booking.findOne({ user });
+        if (alreadyPreBooked) {
+            return res.json({ message: "You have aleady pre booked, Just proceed to choose car and pay", preBookDetails: alreadyPreBooked });
+        }
+    } catch (error) {
+        console.error("Error fetching pre booking:", error);
+        res.status(500).json({ message: error.message });
+    }
+}
