@@ -8,7 +8,7 @@ const {
 } = require("../controllers/user.controller");
 const router = require("express").Router();
 
-router.post('/', userVerification)
+router.post('/verify-token', userVerification)
 
 router.post("/check-user", checkUserFunction)
 

@@ -1,5 +1,7 @@
+const mongoose = require("mongoose");
+
 const vehicleSchema = new mongoose.Schema({
-    make: String,
+    vehicleName: String,
     model: String,
     year: Number,
     type: String,
@@ -7,5 +9,15 @@ const vehicleSchema = new mongoose.Schema({
     location: String,
     available: Boolean,
     images: [String],
-    description: String
+    description: String,
+    createdAt: {
+        type: Date,
+        default: Date.now,
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now,
+    },
 });
+
+module.exports = mongoose.model("Vehicle", vehicleSchema);

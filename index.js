@@ -7,6 +7,7 @@ const app = express();
 require("dotenv").config();
 const cookieParser = require("cookie-parser");
 const authRoute = require("./routes/user.route.js");
+const vehicleRoute = require("./routes/vehicle.route.js");
 const { MONGO_URL, PORT, APP_URL } = process.env;
 const port = PORT || 8081;
 
@@ -34,6 +35,8 @@ app.listen(port, () => {
 });
 
 app.use("/", authRoute);
+app.use("/vehicle", vehicleRoute);
+
 
 app.get("/status", (req, res) => {
     res.send(`Backend for app is running on ${port}`);
