@@ -18,8 +18,8 @@ module.exports.getVehicles = async (req, res) => {
 
 module.exports.addVehicles = async (req, res) => {
     try {
-        const { vehicleData } = req.body;
-        const vehicles = await Vehicle.insertMany(vehicleData);
+        const { data } = req.body;
+        const vehicles = await Vehicle.insertMany(data);
         res.status(201).json({ message: "Vehicles inserted successfully", vehicles });
     } catch (error) {
         console.error(error);

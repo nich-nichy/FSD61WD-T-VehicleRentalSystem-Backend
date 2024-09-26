@@ -39,8 +39,6 @@ app.use("/", authRoute);
 app.use("/vehicle", vehicleRoute);
 app.use("/booking", bookingRoute);
 
-
-
 app.get("/status", (req, res) => {
     res.send(`Backend for app is running on ${port}`);
 });
