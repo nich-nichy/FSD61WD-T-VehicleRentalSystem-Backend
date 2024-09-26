@@ -18,10 +18,13 @@ module.exports.userVerification = (req, res) => {
                 return res.status(404).json({ status: false, message: 'User not found' });
             }
             const isAdmin = user.isAdmin;
+            console.log(user._id)
             return res.status(200).json({
+                id: user._id.toString(),
                 status: true,
                 user: user.username,
-                isAdmin
+                email: user.email,
+                role: isAdmin
             });
         } catch (error) {
             console.error("Error fetching user:", error);

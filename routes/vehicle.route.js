@@ -1,7 +1,8 @@
-const { saveTempData } = require("../controllers/vehicle.controller");
+const { getVehicles, addVehicles } = require("../controllers/vehicle.controller");
 const router = require("express").Router();
 
-router.post("/save-temp", saveTempData)
+router.get("/get-all", getVehicles)
 
+router.post("/save-vehicles", addVehicles)
 
 module.exports = router;

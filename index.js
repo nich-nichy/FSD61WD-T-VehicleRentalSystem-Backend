@@ -8,6 +8,7 @@ require("dotenv").config();
 const cookieParser = require("cookie-parser");
 const authRoute = require("./routes/user.route.js");
 const vehicleRoute = require("./routes/vehicle.route.js");
+const bookingRoute = require("./routes/booking.route.js");
 const { MONGO_URL, PORT, APP_URL } = process.env;
 const port = PORT || 8081;
 
@@ -36,6 +37,8 @@ app.listen(port, () => {
 
 app.use("/", authRoute);
 app.use("/vehicle", vehicleRoute);
+app.use("/booking", bookingRoute);
+
 
 
 app.get("/status", (req, res) => {
