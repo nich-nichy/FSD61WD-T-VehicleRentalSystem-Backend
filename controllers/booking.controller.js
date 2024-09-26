@@ -49,10 +49,12 @@ module.exports.totalPrice = async (req, res) => {
 
 module.exports.getPreBookDetails = async (req, res) => {
     try {
-        const { user } = req.body;
-        const alreadyPreBooked = await Booking.findOne({ user });
+        const { id } = req.params;
+        const alreadyPreBooked = await Booking.findOne({ userId: id });
         if (alreadyPreBooked) {
-            return res.json({ message: "You have aleady pre booked, Just proceed to choose car and pay", preBookDetails: alreadyPreBooked });
+            res.status(200).json({ message: "You have aleady pre booked, Just proceed to choose car and pay", preBookDetails: alreadyPreBooked });
+        } else {
+            res.status(200).json({ message: "No pre book found", preBookDetails: alreadyPreBooked });
         }
     } catch (error) {
         console.error("Error fetching pre booking:", error);

@@ -5,6 +5,6 @@ router.post("/save-temp", saveTempData)
 
 router.get("/get-price/:id", totalPrice)
 
-router.get("/get-prebook", getPreBookDetails)
+router.get("/get-prebook/:id", getPreBookDetails)
 
 module.exports = router;
