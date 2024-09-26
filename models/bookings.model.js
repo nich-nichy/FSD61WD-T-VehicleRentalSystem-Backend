@@ -1,9 +1,12 @@
 const mongoose = require("mongoose");
 
 const bookingSchema = new mongoose.Schema({
-    userId: mongoose.Schema.Types.ObjectId,
-    vehicleId: mongoose.Schema.Types.ObjectId,
+    userId: String,
+    vehicleId: String,
     user: String,
+    email: String,
+    state: String,
+    city: String,
     startDate: Date,
     endDate: Date,
     status: String,

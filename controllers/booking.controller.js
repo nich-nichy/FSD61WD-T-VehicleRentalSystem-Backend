@@ -4,7 +4,7 @@ const { APP_URL } = process.env;
 
 module.exports.saveTempData = async (req, res) => {
     try {
-        const { userId, vehicleId, user, email, state, city, dateRange } = req.body;
+        const { userId, vehicleId, user, email, state, city, startDate, endDate } = req.body;
         const alreadyPreBooked = await Booking.findOne({ user });
         if (alreadyPreBooked) {
             return res.json({ message: "You have aleady pre booked, Just proceed to choose car and pay" });
@@ -16,7 +16,10 @@ module.exports.saveTempData = async (req, res) => {
             email,
             state,
             city,
-            dateRange
+            startDate,
+            endDate,
+            status: false,
+            totalPrice: 0
         });
         console.log(booking);
         res
@@ -31,10 +34,7 @@ module.exports.saveTempData = async (req, res) => {
 module.exports.totalPrice = async (req, res) => {
     try {
         const { id } = req.params;
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ message: "Invalid ID format", success: false });
-        }
-        const fetchUser = await Booking.findOne({ _id: mongoose.Types.ObjectId.createFromHexString(id) });
+        const fetchUser = await Booking.findOne({ userId: id });
         console.log(fetchUser);
         if (!fetchUser) {
             return res.status(404).json({ message: "Pre Booking not found", success: false });
