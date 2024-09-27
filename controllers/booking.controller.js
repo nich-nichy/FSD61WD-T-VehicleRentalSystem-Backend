@@ -66,7 +66,7 @@ module.exports.getPreBookDetails = async (req, res) => {
 module.exports.cancelBooking = async (req, res) => {
     try {
         const { id } = req.params;
-        const deleteBooking = await Booking.delete({ userId: id });
+        const deleteBooking = await Booking.deleteOne({ _id: id });
         console.log({ deleteBooking })
         res.status(200).json({ message: "Booking has been deleted succefully", deleteBooking });
     } catch (error) {
@@ -80,7 +80,7 @@ module.exports.getBookingDetails = async (req, res) => {
         const { id } = req.params;
         const bookingDetails = await Booking.find({ userId: id });
         if (!bookingDetails.length) {
-            return res.status(404).json({ message: "No bookings found for this user" });
+            return res.status(404).json({ message: "No bookings found!" });
         }
         const bookingInfo = await Promise.all(
             bookingDetails.map(async (booking) => {
@@ -108,3 +108,17 @@ module.exports.getBookingDetails = async (req, res) => {
         res.status(500).json({ message: "Internal Server Error", error: error.message });
     }
 };
+
+module.exports.updateBooking = async (req, res) => {
+    try {
+        const { userId, vehicleId, user, email, state, city, startDate, endDate, status, totalPrice } = req.body;
+
+        res.status(200).json({
+            message: "Booking success",
+            bookingInfo
+        });
+    } catch (error) {
+        console.error("Error fetching booking details:", error);
+        res.status(500).json({ message: "Internal Server Error", error: error.message });
+    }
+}
