@@ -84,13 +84,30 @@ module.exports.capturePayment = async (req, res) => {
         const { orderId } = req.body;
         const accessToken = await generateAccessToken()
         const response = await axios({
-            url: process.env.PAYPAL_BASE_URL + `/v2/checkout/orders/${orderId}/capture`,
+            url: process.env.PAYPAL_BASE + `/v2/checkout/orders/${orderId}/capture`,
             method: 'post',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + accessToken
             }
         })
+        res
+            .status(200)
+            .json({ response });
+    } catch (error) {
+        console.error('Error creating PayPal order:', error.response ? error.response.data : error);
+        res.status(500).json({
+            message: 'Failed to create PayPal order',
+            error: error.response ? error.response.data : error.message
+        });
+    }
+
+}
+
+module.exports.cancelVehicle = async (req, res) => {
+    try {
+        const { orderId } = req.body;
+
         res
             .status(200)
             .json({ response });
