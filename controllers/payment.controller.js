@@ -1,13 +1,31 @@
 // const Payment = require('../models/payment.model');
 const { APP_URL } = process.env;
 const Payment = require('../models/payment.model');
+const Vehicle = require('../models/vehicle.model');
 const { generateAccessToken } = require('../utils/paypal.js');
 const axios = require('axios');
 const nodemailer = require('nodemailer');
+const PDFDocument = require('pdfkit');
+const fs = require('fs');
 
-const generateInvoice = async () => {
+const generateInvoice = async (bookingData, amount) => {
+    const doc = new PDFDocument();
+    const filePath = `./invoices/invoice_${bookingData.bookingId}.pdf`;
+    doc.pipe(fs.createWriteStream(filePath));
+    doc.fontSize(20).text('Invoice', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12).text(`Booking ID: ${bookingData.bookingId}`);
+    doc.text(`User Name:${bookingData?.username ? bookingData?.username : 'Test User'} User ID: ${bookingData.userId}`);
+    doc.text(`Vehicle: ${bookingData?.vehicle.make}`);
+    doc.text(`Model: ${bookingData?.vehicle.model} Type: ${bookingData?.vehicle.type}`);
+    doc.text(`Amount: ${amount}`);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`);
+    doc.moveDown();
+    doc.text('Thank you for renting with ORS!', { align: 'center' });
+    doc.end();
+    return filePath;
+};
 
-}
 
 module.exports.getAccessToken = async (req, res) => {
     try {
@@ -72,34 +90,94 @@ module.exports.bookVehicle = async (req, res) => {
             }
         );
         let savePayment = "";
-        if (res.data) {
-            savePayment = await Payment.create({
-                userId: bookingData?.userId,
-                bookingId: bookingData?.bookingId,
-                status: true,
-                amount: formattedAmount,
-                paymentMethod: 'Paypal',
-                paymentStatus: response.data ? true : false,
-            });
-            const transporter = nodemailer.createTransport({
-                service: 'Gmail',
-                auth: {
-                    user: process.env.EMAIL_USER,
-                    pass: process.env.EMAIL_PASS,
-                }
-            });
-            await transporter.sendMail({
-                to: bookingData?.email,
-                from: process.env.EMAIL_USER,
-                subject: 'ORS - Your rental partner',
-                html: `
-                        <p>Hello user!</p>
-                        <p>You have rented the car. Invoice will be ready by 1 min, Please check your Dashboard.</p>
-                        <p>Thanks and regards - Team ORS</p>
-                        <span>Note: All the amounts and credentials are samples for development purpose.</span>
-                    `
+        // if (res.data) {
+        //     savePayment = await Payment.create({
+        //         userId: bookingData?.userId,
+        //         bookingId: bookingData?.bookingId,
+        //         status: true,
+        //         amount: formattedAmount,
+        //         paymentMethod: 'Paypal',
+        //         paymentStatus: response.data ? true : false,
+        //     });
+        //     await generateInvoice(bookingData, formattedAmount);
+        //     const transporter = nodemailer.createTransport({
+        //         service: 'Gmail',
+        //         auth: {
+        //             user: process.env.EMAIL_USER,
+        //             pass: process.env.EMAIL_PASS,
+        //         }
+        //     });
+        //     await transporter.sendMail({
+        //         to: bookingData?.email,
+        //         from: process.env.EMAIL_USER,
+        //         subject: 'ORS - Your rental partner',
+        //         html: `
+        //                 <p>Hello user!</p>
+        //                 <p>You have rented the car. Invoice will be ready by 1 min, Please check your Dashboard.</p>
+        //                 <p>Thanks and regards - Team ORS</p>
+        //                 <span>Note: All the amounts and credentials are samples for development purpose.</span>
+        //             `
+        //     });
+        // }
+        const vehicleDetails = await Vehicle.findById({ _id: bookingData?.vehicleId })
+        console.log(vehicleDetails)
+        let invoiceObj = {
+            ...bookingData,
+            vehicle: {
+                ...vehicleDetails._doc
+            }
+        };
+        console.log(invoiceObj)
+        if (response.data) {
+            try {
+                const savePayment = await Payment.create({
+                    userId: bookingData?.userId,
+                    bookingId: bookingData?.bookingId,
+                    status: true,
+                    amount: formattedAmount,
+                    paymentMethod: 'Paypal',
+                    paymentStatus: response.data ? true : false,
+                });
+                const invoice = await generateInvoice(invoiceObj, formattedAmount);
+                const transporter = nodemailer.createTransport({
+                    service: 'Gmail',
+                    auth: {
+                        user: process.env.EMAIL_USER,
+                        pass: process.env.EMAIL_PASS,
+                    },
+                });
+                await transporter.sendMail({
+                    to: bookingData?.email,
+                    from: process.env.EMAIL_USER,
+                    subject: 'ORS - Your rental partner',
+                    html: `
+                <p>Hello user!</p>
+                <p>You have rented the car. Please find the invoice attached.</p>
+                <p>Thanks and regards - Team ORS</p>
+                <span>Note: All the amounts and credentials are samples for development purposes.</span>
+            `,
+                    attachments: [
+                        {
+                            filename: `invoice_${bookingData.bookingId}.pdf`,
+                            content: invoice,
+                        },
+                    ],
+                });
+                res.status(200).json({
+                    message: 'Payment successful, invoice sent via email.',
+                });
+            } catch (emailError) {
+                console.error('Error sending email:', emailError);
+                res.status(200).json({
+                    message: 'Payment successful, but email failed. Please check your dashboard for the invoice.',
+                });
+            }
+        } else {
+            res.status(500).json({
+                message: 'Payment failed.',
             });
         }
+
         const approvalLink = response.data.links.find(link => link.rel === 'approve').href;
         res.status(200).json({
             message: 'PayPal order created successfully',
