@@ -88,7 +88,7 @@ module.exports.PasswordResetFunction = async (req, res) => {
         await transporter.sendMail({
             to: email,
             from: process.env.EMAIL_USER,
-            subject: 'Password Reset (An Task)',
+            subject: 'Password Reset (ORS test)',
             html: `<p>You requested a password reset</p>
                <p>Click this <a href="${resetLink}">link</a> to reset your password</p>
                <p>This is a task </p>`

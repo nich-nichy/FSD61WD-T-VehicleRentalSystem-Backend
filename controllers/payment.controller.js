@@ -1,7 +1,13 @@
 // const Payment = require('../models/payment.model');
 const { APP_URL } = process.env;
+const Payment = require('../models/payment.model');
 const { generateAccessToken } = require('../utils/paypal.js');
 const axios = require('axios');
+const nodemailer = require('nodemailer');
+
+const generateInvoice = async () => {
+
+}
 
 module.exports.getAccessToken = async (req, res) => {
     try {
@@ -18,7 +24,7 @@ module.exports.getAccessToken = async (req, res) => {
 
 module.exports.bookVehicle = async (req, res) => {
     try {
-        const { amount } = req.body;
+        const { amount, bookingData } = req.body;
         const formattedAmount = parseFloat(amount).toFixed(2);
         const accessToken = await generateAccessToken();
         const response = await axios.post(
@@ -65,10 +71,40 @@ module.exports.bookVehicle = async (req, res) => {
                 }
             }
         );
+        let savePayment = "";
+        if (res.data) {
+            savePayment = await Payment.create({
+                userId: bookingData?.userId,
+                bookingId: bookingData?.bookingId,
+                status: true,
+                amount: formattedAmount,
+                paymentMethod: 'Paypal',
+                paymentStatus: response.data ? true : false,
+            });
+            const transporter = nodemailer.createTransport({
+                service: 'Gmail',
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_PASS,
+                }
+            });
+            await transporter.sendMail({
+                to: bookingData?.email,
+                from: process.env.EMAIL_USER,
+                subject: 'ORS - Your rental partner',
+                html: `
+                        <p>Hello user!</p>
+                        <p>You have rented the car. Invoice will be ready by 1 min, Please check your Dashboard.</p>
+                        <p>Thanks and regards - Team ORS</p>
+                        <span>Note: All the amounts and credentials are samples for development purpose.</span>
+                    `
+            });
+        }
         const approvalLink = response.data.links.find(link => link.rel === 'approve').href;
         res.status(200).json({
             message: 'PayPal order created successfully',
-            approvalLink
+            approvalLink,
+            savePayment
         });
     } catch (error) {
         console.error('Error creating PayPal order:', error.response ? error.response.data : error);
