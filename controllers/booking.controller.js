@@ -6,10 +6,12 @@ const cron = require('node-cron');
 
 module.exports.saveTempData = async (req, res) => {
     try {
-        const { userId, vehicleId, user, email, state, city, startDate, endDate } = req.body;
+        const { userId, vehicleId, user, email, state, city, startDate, endDate, mode } = req.body;
         const alreadyPreBooked = await Booking.findOne({ user });
-        if (alreadyPreBooked) {
-            return res.json({ message: "You have aleady pre booked, Just proceed to choose car and pay" });
+        if (mode === "addMore" && alreadyPreBooked) {
+            return res.json({ message: "Ok sit tight, Currently we support one user - one renting system, We are working to make multiple bookings for a user", mode: "addMore" });
+        } else if (alreadyPreBooked) {
+            return res.json({ message: "Already booked, Just proceed to your car and pay" });
         }
         const booking = await Booking.create({
             userId,
@@ -67,17 +69,44 @@ module.exports.getPreBookDetails = async (req, res) => {
 module.exports.cancelBooking = async (req, res) => {
     try {
         const { id } = req.params;
-        const getBooking = await Booking.findOne({ _id: id })
-        const getVehicleId = await Vehicle.findOne({ _id: getBooking.vehicleId })
-        const changeVehicleAvailability = await Vehicle.updateOne({ _id: getVehicleId }, { $set: { isAvailable: true } });
+        const getBooking = await Booking.findOne({ _id: id });
+        if (!getBooking) {
+            return res.status(404).json({ message: "Booking not found" });
+        }
+        if (getBooking.vehicleId) {
+            const getVehicleId = getBooking.vehicleId;
+            const getVehicle = await Vehicle.findOne({ _id: getVehicleId });
+            if (!getVehicle) {
+                return res.status(404).json({ message: "Vehicle not found" });
+            }
+            const changeVehicleAvailability = await Vehicle.updateOne(
+                { _id: getVehicleId },
+                {
+                    $set: {
+                        'vehicleStatus.available': true,
+                        'vehicleStatus.bookedBy': null,
+                        "vehicleStatus.onRoadFrom": null,
+                        "vehicleStatus.onRoadTo": null
+                    }
+                }
+            );
+            if (changeVehicleAvailability.nModified === 0) {
+                return res.status(400).json({ message: "Failed to update vehicle availability" });
+            }
+        }
         const deleteBooking = await Booking.deleteOne({ _id: id });
-        console.log({ deleteBooking })
-        res.status(200).json({ message: "Booking has been deleted succefully", deleteBooking });
+        if (deleteBooking.deletedCount === 0) {
+            return res.status(400).json({ message: "Failed to delete booking" });
+        }
+        res.status(200).json({
+            message: "Booking has been deleted successfully",
+            deleteBooking
+        });
     } catch (error) {
-        console.error("Error fetching pre booking:", error);
-        res.status(500).json({ message: error.message });
+        console.error("Error canceling booking:", error);
+        res.status(500).json({ message: "Internal Server Error", error: error.message });
     }
-}
+};
 
 module.exports.getBookingDetails = async (req, res) => {
     try {
@@ -88,21 +117,21 @@ module.exports.getBookingDetails = async (req, res) => {
         }
         const bookingInfo = await Promise.all(
             bookingDetails.map(async (booking) => {
-                if (!booking.vehicleId) {
+                if (booking?.totalAmount && booking?.startDate && booking?.endDate) {
+                    const vehicleDetails = await Vehicle.findById(booking.vehicleId);
                     return {
                         ...booking._doc,
-                        vehicleDetails: ''
+                        vehicleDetails: vehicleDetails || '',
+                        message: "You have already rented a vehicle, Want to rent more ?"
                     };
                 }
-                const vehicleDetails = await Vehicle.findById(booking.vehicleId);
                 return {
                     ...booking._doc,
-                    vehicleDetails: vehicleDetails || ''
+                    vehicleDetails: ''
                 };
             })
         );
         bookingInfo.sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
-        console.log(bookingInfo);
         res.status(200).json({
             message: "Booking details fetched successfully",
             bookingInfo
@@ -112,74 +141,6 @@ module.exports.getBookingDetails = async (req, res) => {
         res.status(500).json({ message: "Internal Server Error", error: error.message });
     }
 };
-
-// module.exports.updateBooking = async (req, res) => {
-//     try {
-//         const { bookingId, userId, vehicleId, user, email, state, city, startDate, endDate, status, totalAmount, totalPrice } = req.body;
-//         const bookVehicle = await Booking.findOneAndUpdate(
-//             { _id: bookingId },
-//             {
-//                 userId,
-//                 vehicleId,
-//                 user,
-//                 email,
-//                 state,
-//                 city,
-//                 startDate,
-//                 endDate,
-//                 status,
-//                 totalAmount
-//             },
-//             { new: true }
-//         );
-//         if (!bookVehicle) {
-//             return res.status(404).json({ message: "Booking not found" });
-//         }
-//         const vehicle = await Vehicle.findOneAndUpdate(
-//             { _id: vehicleId },
-//             { $set: { onRoadFrom: startDate, onRoadTo: endDate, availability: 'on road' } }, // Set on road
-//             { new: true }
-//         );
-//         if (!vehicle) {
-//             return res.status(404).json({ message: "Vehicle not found" });
-//         }
-//         const endDateTime = new Date(endDate).getTime();
-//         const currentTime = new Date().getTime();
-//         const delay = endDateTime - currentTime;
-
-//         if (delay > 0) {
-//             setTimeout(async () => {
-//                 try {
-//                     await Vehicle.findOneAndUpdate(
-//                         { _id: vehicleId },
-//                         { $set: { availability: 'available', onRoadFrom: null, onRoadTo: null } }
-//                     );
-//                     console.log(`Vehicle ${vehicleId} is now available`);
-//                 } catch (error) {
-//                     console.error("Error updating vehicle status:", error);
-//                 }
-//             }, delay);
-//         }
-
-//         // cron.schedule('*/1 * * * *', async () => {
-//         //     const vehiclesOnRoad = await Vehicle.find({ onRoadTo: { $lte: new Date() } });
-//         //     for (const v of vehiclesOnRoad) {
-//         //         await Vehicle.updateOne({ _id: v._id }, { availability: 'available', onRoadFrom: null, onRoadTo: null });
-//         //         console.log(`Vehicle ${v._id} is now available`);
-//         //     }
-//         // });
-
-
-
-//         res.status(200).json({
-//             message: "Booking updated successfully",
-//             bookingInfo: bookVehicle
-//         });
-//     } catch (error) {
-//         console.error("Error updating booking:", error);
-//         res.status(500).json({ message: "Internal Server Error", error: error.message });
-//     }
-// };
 
 module.exports.updateBooking = async (req, res) => {
     try {
@@ -205,28 +166,22 @@ module.exports.updateBooking = async (req, res) => {
         if (!bookVehicle) {
             return res.status(404).json({ message: "Booking not found" });
         }
-        const startDateTime = new Date(startDate).getTime();
-        const endDateTime = new Date(endDate).getTime();
-        const currentTime = new Date().getTime();
         let availableStatus = false;
         let onRoadFrom = startDate;
         let onRoadTo = endDate;
-        if (endDateTime < currentTime) {
-            availableStatus = true;
-            onRoadFrom = null;
-            onRoadTo = null;
-        }
         const vehicle = await Vehicle.findOneAndUpdate(
             { _id: vehicleId },
             {
                 $set: {
-                    onRoadFrom,
-                    onRoadTo,
-                    available: availableStatus
+                    "vehicleStatus.bookedBy": userId,
+                    "vehicleStatus.onRoadFrom": onRoadFrom,
+                    "vehicleStatus.onRoadTo": onRoadTo,
+                    "vehicleStatus.available": availableStatus
                 }
             },
-            { new: true }
+            { new: true, upsert: true }
         );
+
         if (!vehicle) {
             return res.status(404).json({ message: "Vehicle not found" });
         }
@@ -240,3 +195,4 @@ module.exports.updateBooking = async (req, res) => {
         res.status(500).json({ message: "Internal Server Error", error: error.message });
     }
 };
+

@@ -93,7 +93,7 @@ module.exports.capturePayment = async (req, res) => {
         })
         res
             .status(200)
-            .json({ response });
+            .json(response);
     } catch (error) {
         console.error('Error creating PayPal order:', error.response ? error.response.data : error);
         res.status(500).json({
