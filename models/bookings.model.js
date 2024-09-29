@@ -11,7 +11,11 @@ const bookingSchema = new mongoose.Schema({
     endDate: Date,
     status: String,
     totalPrice: Number,
-    totalAmount: Number
+    totalAmount: Number,
+    createdAt: {
+        type: Date,
+        default: Date.now,
+    },
 });
 
 module.exports = mongoose.model("Booking", bookingSchema);

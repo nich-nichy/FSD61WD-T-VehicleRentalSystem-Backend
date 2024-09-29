@@ -4,7 +4,8 @@ const {
     LoginFunction,
     PasswordResetFunction,
     UpdatePasswordFunction,
-    checkUserFunction
+    checkUserFunction,
+    updateUserProfile
 } = require("../controllers/user.controller");
 const router = require("express").Router();
 
@@ -19,6 +20,8 @@ router.post('/login', LoginFunction)
 router.post("/reset-request", PasswordResetFunction)
 
 router.post("/reset-password/:token", UpdatePasswordFunction)
+
+router.put("/update-user-profile", updateUserProfile)
 
 
 module.exports = router;

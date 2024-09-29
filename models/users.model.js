@@ -23,6 +23,7 @@ const userSchema = new mongoose.Schema({
     },
     bookings: [mongoose.Schema.Types.ObjectId],
     reviews: [mongoose.Schema.Types.ObjectId],
+    image: String,
     isAdmin: Boolean
 });
 

@@ -15,7 +15,11 @@ const vehicleSchema = new mongoose.Schema({
         onRoadFrom: Date,
         onRoadTo: Date,
         available: Boolean,
-    }
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now,
+    },
 });
 
 const Vehicle = mongoose.model('Vehicle', vehicleSchema);

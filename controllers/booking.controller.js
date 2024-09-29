@@ -1,12 +1,13 @@
 const Booking = require('../models/bookings.model');
 const Vehicle = require('../models/vehicle.model');
+const Payment = require('../models/payment.model');
 const mongoose = require('mongoose');
 const { APP_URL } = process.env;
 const cron = require('node-cron');
 
 module.exports.saveTempData = async (req, res) => {
     try {
-        const { userId, vehicleId, user, email, state, city, startDate, endDate, mode } = req.body;
+        const { userId, vehicleId, user, email, state, city, startDate, endDate, mode, createdAt, totalAmount } = req.body;
         const alreadyPreBooked = await Booking.findOne({ user });
         if (mode === "addMore" && alreadyPreBooked) {
             return res.json({ message: "Ok sit tight, Currently we support one user - one renting system, We are working to make multiple bookings for a user", mode: "addMore" });
@@ -23,7 +24,9 @@ module.exports.saveTempData = async (req, res) => {
             startDate,
             endDate,
             status: false,
-            totalPrice: 0
+            totalPrice: 0,
+            createdAt,
+            totalAmount
         });
         console.log(booking);
         res
@@ -113,7 +116,7 @@ module.exports.getBookingDetails = async (req, res) => {
         const { id } = req.params;
         const bookingDetails = await Booking.find({ userId: id });
         if (!bookingDetails.length) {
-            return res.status(404).json({ message: "No bookings found!" });
+            return res.status(200).json({ message: "No bookings found!" });
         }
         const bookingInfo = await Promise.all(
             bookingDetails.map(async (booking) => {
@@ -145,7 +148,7 @@ module.exports.getBookingDetails = async (req, res) => {
 module.exports.updateBooking = async (req, res) => {
     try {
         const {
-            bookingId, userId, vehicleId, user, email, state, city, startDate, endDate, status, totalAmount
+            bookingId, userId, vehicleId, user, email, state, city, startDate, endDate, status, totalAmount, createdAt
         } = req.body;
         const bookVehicle = await Booking.findOneAndUpdate(
             { _id: bookingId },
@@ -159,7 +162,8 @@ module.exports.updateBooking = async (req, res) => {
                 startDate,
                 endDate,
                 status,
-                totalAmount
+                totalAmount,
+                createdAt
             },
             { new: true }
         );
@@ -192,6 +196,85 @@ module.exports.updateBooking = async (req, res) => {
         });
     } catch (error) {
         console.error("Error updating booking:", error);
+        res.status(500).json({ message: "Internal Server Error", error: error.message });
+    }
+};
+
+// module.exports.getDashboardData = async (req, res) => {
+//     try {
+//         const { id } = req.params;
+//         let dashboardData = {};
+//         const bookingDetails = await Booking.find({ userId: id });
+
+//         console.log(bookingDetails, "Booking details");
+//         const bookingArr = [];
+//         const paymentArr = [];
+//         let vehicleObj = {};
+//         for (const booking of bookingDetails) {
+//             const bookingId = booking._id;
+//             const paymentDetails = await Payment.find({ bookingId: bookingId });
+//             console.log(paymentDetails, "Payment details");
+//             const vehicleDetail = await Vehicle.findById({ _id: booking.vehicleId });
+//             paymentArr.push(paymentDetails);
+//             bookingArr.push({
+//                 ...booking._doc,
+//                 bookingId: booking._id
+//             });
+//             vehicleObj = {
+//                 ...vehicleDetail?._doc
+//             }
+//         }
+//         dashboardData = {
+//             bookingDetails: bookingArr,
+//             paymentDetails: paymentArr,
+//             vehicleObj
+//         };
+//         res.status(200).json({
+//             message: "Data fetched successfully",
+//             dashboardData
+//         });
+//     } catch (error) {
+//         console.error("Error fetching booking details:", error);
+//         res.status(500).json({ message: "Internal Server Error", error: error.message });
+//     }
+// };
+
+module.exports.getDashboardData = async (req, res) => {
+    try {
+        const { id } = req.params;
+        let dashboardData = [];
+        let allData = {};
+        const bookingDetails = await Booking.find({ userId: id });
+        for (const booking of bookingDetails) {
+            const bookingId = booking._id;
+            const paymentDetails = await Payment.find({ bookingId: bookingId });
+            const vehicleDetail = await Vehicle.findById({ _id: booking.vehicleId });
+            console.log({
+                payment: paymentDetails,
+                vehicle: vehicleDetail._doc,
+                book: bookingDetails
+            })
+            allData = {
+                payment: paymentDetails,
+                vehicle: vehicleDetail._doc,
+                book: bookingDetails
+            }
+            dashboardData.push({
+                bookingDetails: {
+                    ...booking._doc,
+                    bookingId: booking._id
+                },
+                paymentDetails: paymentDetails.length > 0 ? paymentDetails[0] : null,
+                vehicleDetails: vehicleDetail ? vehicleDetail._doc : null
+            });
+        }
+        res.status(200).json({
+            message: "Data fetched successfully",
+            dashboardData,
+            allData
+        });
+    } catch (error) {
+        console.error("Error fetching booking details:", error);
         res.status(500).json({ message: "Internal Server Error", error: error.message });
     }
 };

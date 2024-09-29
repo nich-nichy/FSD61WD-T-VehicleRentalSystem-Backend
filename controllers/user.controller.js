@@ -121,20 +121,40 @@ module.exports.UpdatePasswordFunction = async (req, res, next) => {
     }
 };
 
-module.exports.Check = [
-    userVerification,
-    async (req, res) => {
-        try {
-            if (req.body.isAdmin) {
-                return res.status(200).json({ message: 'Welcome, Admin!' });
-            } else {
-                return res.status(200).json({ message: 'Welcome, User!' });
-            }
-        } catch (error) {
-            console.error("Error in Check:", error);
-            res.status(500).json({ message: 'Internal Server Error' });
+module.exports.updateUser = async (req, res, next) => {
+    try {
+        const { newPassword } = req.body;
+        const { token } = req.params;
+        const user = await User.findOne({ resetToken: token });
+        if (!user) {
+            return res.status(404).json({ message: 'Invalid or expired reset token' });
         }
+        if (user.resetTokenExpiration < Date.now()) {
+            return res.status(400).json({ message: 'Reset token has expired' });
+        }
+        user.password = newPassword;
+        user.resetToken = undefined;
+        user.resetTokenExpiration = undefined;
+        await user.save();
+        res.status(200).json({ message: 'Password updated successfully', success: true });
+    } catch (error) {
+        console.error("Error during saving new password:", error);
+        res.status(500).json({ message: "Internal Server Error" });
     }
-];
+};
 
+module.exports.updateUserProfile = async (req, res, next) => {
+    try {
+        const { name, email, profilePicture } = req.body;
+        const user = await User.findOneAndUpdate(
+            { username: name },
+            { username: name, email: email, image: profilePicture }
+        );
+        await user.save();
+        res.status(200).json({ message: 'User details saved', success: true });
+    } catch (error) {
+        console.error("Error during saving User details", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+};
 
