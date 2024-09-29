@@ -1,5 +1,3 @@
-// const Payment = require('../models/payment.model');
-const { APP_URL } = process.env;
 const Payment = require('../models/payment.model');
 const Vehicle = require('../models/vehicle.model');
 const User = require('../models/users.model');
@@ -8,6 +6,7 @@ const axios = require('axios');
 const nodemailer = require('nodemailer');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
+const path = require('path');
 
 const generateInvoice = async (bookingData, amount) => {
     const doc = new PDFDocument();
@@ -16,12 +15,12 @@ const generateInvoice = async (bookingData, amount) => {
     doc.fontSize(20).text('Invoice', { align: 'center' });
     doc.moveDown();
     doc.fontSize(12).text(`Booking ID: ${bookingData.bookingId}`);
-    doc.text(`User Name:${bookingData?.user.username ? bookingData?.user.username : 'ORS User'} User ID: ${bookingData.userId}`);
+    doc.text(`User Name:${bookingData?.user.username ? bookingData?.user.username : 'ORS User'}`);
     doc.text(`Vehicle: ${bookingData?.vehicle.make}`);
     doc.text(`Model: ${bookingData?.vehicle.model} Type: ${bookingData?.vehicle.type}`);
     doc.text(`Amount: ${amount}`);
     doc.text(`Payment type: Paypal`);
-    doc.text(`Date: ${new Date().toLocaleDateString()}`);
+    doc.text(`Booked on: ${new Date().toLocaleDateString()}`);
     doc.moveDown();
     doc.text('Thank you for renting with ORS!', { align: 'center' });
     doc.end();
@@ -208,3 +207,19 @@ module.exports.cancelVehicle = async (req, res) => {
     }
 
 }
+
+module.exports.getInvoice = async (req, res) => {
+    try {
+        const { bookingId } = req.body;
+        const invoicePath = path.join(__dirname, '../invoices', `invoice_${bookingId}.pdf`);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=invoice_${bookingId}.pdf`);
+        res.sendFile(invoicePath);
+    } catch (error) {
+        console.error('Error sending invoice:', error);
+        res.status(500).json({
+            message: 'Error sending invoice',
+            error: error.message
+        });
+    }
+};

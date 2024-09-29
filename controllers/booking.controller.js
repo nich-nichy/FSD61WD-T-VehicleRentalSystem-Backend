@@ -1,9 +1,6 @@
 const Booking = require('../models/bookings.model');
 const Vehicle = require('../models/vehicle.model');
 const Payment = require('../models/payment.model');
-const mongoose = require('mongoose');
-const { APP_URL } = process.env;
-const cron = require('node-cron');
 
 module.exports.saveTempData = async (req, res) => {
     try {
