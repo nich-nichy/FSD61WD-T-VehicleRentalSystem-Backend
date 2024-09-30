@@ -15,7 +15,7 @@ const generateInvoice = async (bookingData, amount) => {
     doc.fontSize(20).text('Invoice', { align: 'center' });
     doc.moveDown();
     doc.fontSize(12).text(`Booking ID: ${bookingData.bookingId}`);
-    doc.text(`User Name:${bookingData?.user.username ? bookingData?.user.username : 'ORS User'}`);
+    doc.text(`User Name: ${bookingData?.user.username ? bookingData?.user.username : 'ORS User'}`);
     doc.text(`Vehicle: ${bookingData?.vehicle.make}`);
     doc.text(`Model: ${bookingData?.vehicle.model} Type: ${bookingData?.vehicle.type}`);
     doc.text(`Amount: ${amount}`);

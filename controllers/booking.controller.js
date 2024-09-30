@@ -164,28 +164,32 @@ module.exports.updateBooking = async (req, res) => {
             },
             { new: true }
         );
+        let vehicle;
         if (!bookVehicle) {
             return res.status(404).json({ message: "Booking not found" });
         }
         let availableStatus = false;
         let onRoadFrom = startDate;
         let onRoadTo = endDate;
-        const vehicle = await Vehicle.findOneAndUpdate(
-            { _id: vehicleId },
-            {
-                $set: {
-                    "vehicleStatus.bookedBy": userId,
-                    "vehicleStatus.onRoadFrom": onRoadFrom,
-                    "vehicleStatus.onRoadTo": onRoadTo,
-                    "vehicleStatus.available": availableStatus
-                }
-            },
-            { new: true, upsert: true }
-        );
 
-        if (!vehicle) {
-            return res.status(404).json({ message: "Vehicle not found" });
+        if (vehicleId) {
+            vehicle = await Vehicle.findOneAndUpdate(
+                { _id: vehicleId },
+                {
+                    $set: {
+                        "vehicleStatus.bookedBy": userId,
+                        "vehicleStatus.onRoadFrom": onRoadFrom,
+                        "vehicleStatus.onRoadTo": onRoadTo,
+                        "vehicleStatus.available": availableStatus
+                    }
+                },
+                { new: true, upsert: true }
+            );
         }
+
+        // if (!vehicle) {
+        //     return res.status(404).json({ message: "Vehicle not found" });
+        // }
         console.log(vehicle, "Vehicle data after update");
         res.status(200).json({
             message: "Booking updated successfully",
@@ -244,16 +248,18 @@ module.exports.getDashboardData = async (req, res) => {
         const bookingDetails = await Booking.find({ userId: id });
         for (const booking of bookingDetails) {
             const bookingId = booking._id;
-            const paymentDetails = await Payment.find({ bookingId: bookingId });
-            const vehicleDetail = await Vehicle.findById({ _id: booking.vehicleId });
-            console.log({
-                payment: paymentDetails,
-                vehicle: vehicleDetail._doc,
-                book: bookingDetails
-            })
+            let paymentDetails;
+            let vehicleDetail;
+            if (bookingId) {
+                paymentDetails = await Payment.find({ bookingId: bookingId });
+            }
+            console.log(bookingId)
+            if (booking.vehicleId) {
+                vehicleDetail = await Vehicle.findById({ _id: booking.vehicleId });
+            }
             allData = {
                 payment: paymentDetails,
-                vehicle: vehicleDetail._doc,
+                vehicle: vehicleDetail?._doc ? vehicleDetail._doc : vehicleDetail,
                 book: bookingDetails
             }
             dashboardData.push({
@@ -276,3 +282,42 @@ module.exports.getDashboardData = async (req, res) => {
     }
 };
 
+module.exports.updateCurrentBooking = async (req, res) => {
+    try {
+        const {
+            bookingId, userId, vehicleId, user, email, state, city, startDate, endDate, status, totalAmount, createdAt
+        } = req.body;
+        if (vehicleId) {
+            let vehicle = await Vehicle.findOne(
+                { _id: vehicleId }
+            );
+            if (vehicle) {
+                res.status(200).json({
+                    message: "Once vehicle is booked you cant change the details, Please cancel the booking and continue",
+                    bookingInfo: bookVehicle
+                });
+            }
+        }
+        const bookVehicle = await Booking.findOneAndUpdate(
+            { userId: userId },
+            {
+                user,
+                email,
+                state,
+                city,
+                startDate,
+                endDate,
+            },
+        );
+        if (!bookVehicle) {
+            return res.status(404).json({ message: "Booking not found" });
+        }
+        res.status(200).json({
+            message: "Booking updated successfully",
+            bookingInfo: bookVehicle
+        });
+    } catch (error) {
+        console.error("Error updating booking:", error);
+        res.status(500).json({ message: "Internal Server Error", error: error.message });
+    }
+}
