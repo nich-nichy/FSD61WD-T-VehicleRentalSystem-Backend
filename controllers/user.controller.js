@@ -56,7 +56,7 @@ module.exports.LoginFunction = async (req, res, next) => {
         }
         const token = createSecretToken(user._id);
         return res.status(200).json({
-            message: "User logged in successfully",
+            message: `Logged in successfully`,
             success: true,
             token
         });

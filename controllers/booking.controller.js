@@ -1,6 +1,7 @@
 const Booking = require('../models/bookings.model');
 const Vehicle = require('../models/vehicle.model');
 const Payment = require('../models/payment.model');
+const Review = require('../models/review.model');
 
 module.exports.saveTempData = async (req, res) => {
     try {
@@ -246,31 +247,48 @@ module.exports.getDashboardData = async (req, res) => {
         let dashboardData = [];
         let allData = {};
         const bookingDetails = await Booking.find({ userId: id });
+
         for (const booking of bookingDetails) {
             const bookingId = booking._id;
-            let paymentDetails;
-            let vehicleDetail;
+            let paymentDetails = [];
+            let vehicleDetail = null;
+            let reviewDetails = [];
+
+            // Fetch review details for the current booking (user and vehicle)
+            if (booking.userId) {
+                reviewDetails = await Review.find({ userId: booking.userId, vehicleId: booking.vehicleId });
+            }
+
+            // Fetch payment details
             if (bookingId) {
                 paymentDetails = await Payment.find({ bookingId: bookingId });
             }
-            console.log(bookingId)
+
+            // Fetch vehicle details
             if (booking.vehicleId) {
-                vehicleDetail = await Vehicle.findById({ _id: booking.vehicleId });
+                vehicleDetail = await Vehicle.findById(booking.vehicleId);
             }
+
+            // Populate allData object if needed
             allData = {
                 payment: paymentDetails,
                 vehicle: vehicleDetail?._doc ? vehicleDetail._doc : vehicleDetail,
                 book: bookingDetails
-            }
+            };
+
+            // Push the data for this booking into dashboardData
             dashboardData.push({
                 bookingDetails: {
                     ...booking._doc,
                     bookingId: booking._id
                 },
                 paymentDetails: paymentDetails.length > 0 ? paymentDetails[0] : null,
-                vehicleDetails: vehicleDetail ? vehicleDetail._doc : null
+                vehicleDetails: vehicleDetail ? vehicleDetail._doc : null,
+                reviewDetails: reviewDetails.length > 0 ? reviewDetails : null, // Fix here: handle multiple reviews
             });
         }
+
+        // Return the collected data
         res.status(200).json({
             message: "Data fetched successfully",
             dashboardData,
@@ -281,6 +299,7 @@ module.exports.getDashboardData = async (req, res) => {
         res.status(500).json({ message: "Internal Server Error", error: error.message });
     }
 };
+
 
 module.exports.updateCurrentBooking = async (req, res) => {
     try {

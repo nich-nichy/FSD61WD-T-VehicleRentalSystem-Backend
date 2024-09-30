@@ -12,6 +12,7 @@ const bookingRoute = require("./routes/booking.route.js");
 const paymentRoute = require("./routes/payment.route.js");
 const postRoute = require("./routes/post.route.js");
 const adminRoute = require("./routes/admin.route.js");
+const reviewRoute = require("./routes/review.route.js");
 const { MONGO_URL, PORT, APP_URL } = process.env;
 const port = PORT || 8081;
 
@@ -43,7 +44,7 @@ app.use("/vehicle", vehicleRoute);
 app.use("/booking", bookingRoute);
 app.use("/payment", paymentRoute);
 app.use("/posts", postRoute);
-// app.use("/payment", paymentRoute);
+app.use("/review", reviewRoute);
 
 app.use("/admin", adminRoute);
 

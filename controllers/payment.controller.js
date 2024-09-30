@@ -188,7 +188,6 @@ module.exports.capturePayment = async (req, res) => {
             error: error.response ? error.response.data : error.message
         });
     }
-
 }
 
 module.exports.cancelVehicle = async (req, res) => {
