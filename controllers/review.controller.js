@@ -46,6 +46,7 @@ module.exports.GetAllReviews = async (req, res) => {
 
             return {
                 username: user ? user.username : "Unknown",
+                profilePicture: user ? user.profilePicture : "",
                 reviewDetails: review,
                 vehicleDetails: vehicle ? vehicle : "Vehicle not found"
             };

@@ -281,14 +281,16 @@ module.exports.getDashboardData = async (req, res) => {
             let paymentDetails = [];
             let vehicleDetail = null;
             let reviewDetails = [];
-            if (booking.userId) {
+            if (booking.userId && booking.vehicleId) {
                 reviewDetails = await Review.find({ userId: booking.userId, vehicleId: booking.vehicleId });
+            } else {
+                reviewDetails = await Review.find({ userId: booking.userId });
             }
             if (bookingId) {
                 paymentDetails = await Payment.find({ bookingId: bookingId });
             }
             if (booking.vehicleId) {
-                vehicleDetail = await Vehicle.findById(booking.vehicleId);
+                vehicleDetail = await Vehicle.findById({ _id: booking.vehicleId });
             }
             allData = {
                 payment: paymentDetails,

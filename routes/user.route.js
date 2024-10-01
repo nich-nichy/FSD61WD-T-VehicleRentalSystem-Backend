@@ -5,7 +5,8 @@ const {
     PasswordResetFunction,
     UpdatePasswordFunction,
     checkUserFunction,
-    updateUserProfile
+    updateUserProfile,
+    getUserProfile
 } = require("../controllers/user.controller");
 const router = require("express").Router();
 
@@ -22,6 +23,8 @@ router.post("/reset-request", PasswordResetFunction)
 router.post("/reset-password/:token", UpdatePasswordFunction)
 
 router.put("/update-user-profile", updateUserProfile)
+
+router.get("/get-user-profile/:id", getUserProfile)
 
 
 module.exports = router;
