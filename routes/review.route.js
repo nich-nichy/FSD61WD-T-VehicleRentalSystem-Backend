@@ -6,6 +6,6 @@ const router = require("express").Router();
 
 router.post('/create-review', CreateReview)
 
-router.post("get-reviews", GetAllReviews)
+router.get("/get-reviews", GetAllReviews)
 
 module.exports = router;

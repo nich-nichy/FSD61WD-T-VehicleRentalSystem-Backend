@@ -3,7 +3,6 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { createSecretToken } = require("../utils/SecretToken");
 const User = require('../models/users.model');
-const { APP_URL } = process.env;
 const { userVerification } = require("../middlewares/user.middleware")
 
 module.exports.checkUserFunction = async (req, res) => {

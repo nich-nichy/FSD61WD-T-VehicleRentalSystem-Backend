@@ -2,6 +2,8 @@ const Booking = require('../models/bookings.model');
 const Vehicle = require('../models/vehicle.model');
 const Payment = require('../models/payment.model');
 const Review = require('../models/review.model');
+const nodemailer = require('nodemailer');
+const { EMAIL_USER, EMAIL_PASS } = process.env;
 
 module.exports.saveTempData = async (req, res) => {
     try {
@@ -74,9 +76,12 @@ module.exports.cancelBooking = async (req, res) => {
         if (!getBooking) {
             return res.status(404).json({ message: "Booking not found" });
         }
+        let getVehicle;
+        let getEmail;
         if (getBooking.vehicleId) {
             const getVehicleId = getBooking.vehicleId;
-            const getVehicle = await Vehicle.findOne({ _id: getVehicleId });
+            getEmail = getBooking?.email
+            getVehicle = await Vehicle.findOne({ _id: getVehicleId });
             if (!getVehicle) {
                 return res.status(404).json({ message: "Vehicle not found" });
             }
@@ -99,8 +104,32 @@ module.exports.cancelBooking = async (req, res) => {
         if (deleteBooking.deletedCount === 0) {
             return res.status(400).json({ message: "Failed to delete booking" });
         }
+        const sendCancelEmail = async () => {
+            const transporter = nodemailer.createTransport({
+                service: 'Gmail',
+                auth: {
+                    user: EMAIL_USER,
+                    pass: EMAIL_PASS,
+                },
+            });
+            await transporter.sendMail({
+                to: getEmail,
+                from: EMAIL_USER,
+                subject: 'ORS - Your rental partner',
+                html: `
+                    <p>Hello user!</p>
+                    <p>You have cancelled the car. Your amount will be refunded once our admin checks the vehicle.</p>
+                    <p>Once confirmed the refund process will be take upto 2-3 business days.</p>
+                    <p>Thanks and regards - Team ORS</p>
+                    <span>Note: All the amounts and credentials are samples for development purposes.</span>
+                `
+            });
+        }
+        if (getVehicle) {
+            sendCancelEmail();
+        }
         res.status(200).json({
-            message: "Booking has been deleted successfully",
+            message: "Booking has been cancelled successfully",
             deleteBooking
         });
     } catch (error) {
@@ -247,36 +276,25 @@ module.exports.getDashboardData = async (req, res) => {
         let dashboardData = [];
         let allData = {};
         const bookingDetails = await Booking.find({ userId: id });
-
         for (const booking of bookingDetails) {
             const bookingId = booking._id;
             let paymentDetails = [];
             let vehicleDetail = null;
             let reviewDetails = [];
-
-            // Fetch review details for the current booking (user and vehicle)
             if (booking.userId) {
                 reviewDetails = await Review.find({ userId: booking.userId, vehicleId: booking.vehicleId });
             }
-
-            // Fetch payment details
             if (bookingId) {
                 paymentDetails = await Payment.find({ bookingId: bookingId });
             }
-
-            // Fetch vehicle details
             if (booking.vehicleId) {
                 vehicleDetail = await Vehicle.findById(booking.vehicleId);
             }
-
-            // Populate allData object if needed
             allData = {
                 payment: paymentDetails,
                 vehicle: vehicleDetail?._doc ? vehicleDetail._doc : vehicleDetail,
                 book: bookingDetails
             };
-
-            // Push the data for this booking into dashboardData
             dashboardData.push({
                 bookingDetails: {
                     ...booking._doc,
@@ -287,8 +305,6 @@ module.exports.getDashboardData = async (req, res) => {
                 reviewDetails: reviewDetails.length > 0 ? reviewDetails : null, // Fix here: handle multiple reviews
             });
         }
-
-        // Return the collected data
         res.status(200).json({
             message: "Data fetched successfully",
             dashboardData,
@@ -328,9 +344,6 @@ module.exports.updateCurrentBooking = async (req, res) => {
                 endDate,
             },
         );
-        if (!bookVehicle) {
-            return res.status(404).json({ message: "Booking not found" });
-        }
         res.status(200).json({
             message: "Booking updated successfully",
             bookingInfo: bookVehicle
