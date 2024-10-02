@@ -137,6 +137,13 @@ module.exports.capturePayment = async (req, res) => {
                         paymentMethod: 'Paypal',
                         paymentStatus: response.data ? true : false,
                     });
+                    const transporter = nodemailer.createTransport({
+                        service: 'Gmail',
+                        auth: {
+                            user: process.env.EMAIL_USER,
+                            pass: process.env.EMAIL_PASS,
+                        },
+                    });
                     await transporter.sendMail({
                         to: bookingData?.email,
                         from: process.env.EMAIL_USER,
@@ -155,14 +162,6 @@ module.exports.capturePayment = async (req, res) => {
                         ],
                     });
                     const invoice = await generateInvoice(invoiceObj, bookingData?.totalAmount);
-                    const transporter = nodemailer.createTransport({
-                        service: 'Gmail',
-                        auth: {
-                            user: process.env.EMAIL_USER,
-                            pass: process.env.EMAIL_PASS,
-                        },
-                    });
-
                     res.status(200).json({
                         message: 'Payment captured successfully', savePayment,
                     });
