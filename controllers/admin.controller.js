@@ -4,6 +4,7 @@ const Booking = require('../models/bookings.model');
 const Vehicle = require('../models/vehicle.model');
 const Payment = require('../models/payment.model');
 const User = require('../models/users.model');
+const Review = require('../models/review.model');
 
 const generateAdminToken = (admin) => {
     return jwt.sign(admin, process.env.ADMIN_SECRET, { expiresIn: '2d' });
@@ -35,7 +36,7 @@ module.exports.getDashboardData = async (req, res) => {
         const bookingDetails = await Booking.find({});
         const paymentDetails = await Payment.find({});
         const userDetails = await User.find({});
-        // const reviewDetails = await Review.find({});
+        const reviewDetails = await Review.find({});
         res.status(200).json({
             message: "Data fetched successfully",
             dashboardData: {
@@ -43,7 +44,7 @@ module.exports.getDashboardData = async (req, res) => {
                 bookings: bookingDetails,
                 payments: paymentDetails,
                 users: userDetails,
-
+                reviews: reviewDetails
             }
         });
     } catch (error) {
