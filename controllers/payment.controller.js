@@ -30,7 +30,6 @@ const generateInvoice = async (bookingData, amount) => {
 module.exports.getAccessToken = async (req, res) => {
     try {
         const response = await generateAccessToken();
-        console.log(response);
         res
             .status(201)
             .json({ response });
@@ -109,7 +108,6 @@ module.exports.capturePayment = async (req, res) => {
         const accessToken = await generateAccessToken()
         const vehicleDetails = await Vehicle.findById({ _id: bookingData?.vehicleId })
         const userDetails = await User.findById({ _id: bookingData?.userId })
-        console.log(vehicleDetails)
         let invoiceObj = {
             ...bookingData,
             vehicle: {
@@ -119,7 +117,6 @@ module.exports.capturePayment = async (req, res) => {
                 ...userDetails?._doc
             }
         };
-        console.log(invoiceObj)
         const response = await axios({
             url: process.env.PAYPAL_BASE + `/v2/checkout/orders/${orderId}/capture`,
             method: 'post',
@@ -188,23 +185,6 @@ module.exports.capturePayment = async (req, res) => {
             error: error.response ? error.response.data : error.message
         });
     }
-}
-
-module.exports.cancelVehicle = async (req, res) => {
-    try {
-        const { orderId } = req.body;
-
-        res
-            .status(200)
-            .json({ response });
-    } catch (error) {
-        console.error('Error creating PayPal order:', error.response ? error.response.data : error);
-        res.status(500).json({
-            message: 'Failed to create PayPal order',
-            error: error.response ? error.response.data : error.message
-        });
-    }
-
 }
 
 module.exports.getInvoice = async (req, res) => {

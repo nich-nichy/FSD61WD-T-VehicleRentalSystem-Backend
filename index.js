@@ -16,8 +16,6 @@ const reviewRoute = require("./routes/review.route.js");
 const { MONGO_URL, PORT, APP_URL } = process.env;
 const port = PORT || 8081;
 
-console.log(typeof APP_URL, "from index")
-
 app.use(
     cors({
         origin: APP_URL,
@@ -54,7 +52,6 @@ app.get("/status", (req, res) => {
     res.send(`Backend for app is running on ${port}`);
 });
 
-// Error handling
 app.use((req, res, next) => {
     const error = {
         status: 404,

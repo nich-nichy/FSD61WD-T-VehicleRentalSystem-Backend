@@ -15,7 +15,6 @@ module.exports.checkUserFunction = async (req, res) => {
             res.status(200).json({ message: "User is not present", status: false });
         }
     } catch (error) {
-        console.log(error);
         res.status(500).json({ message: "Internal Server Error" });
     }
 }

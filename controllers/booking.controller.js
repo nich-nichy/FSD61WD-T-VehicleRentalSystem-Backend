@@ -3,6 +3,8 @@ const Vehicle = require('../models/vehicle.model');
 const Payment = require('../models/payment.model');
 const Review = require('../models/review.model');
 const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
 const { EMAIL_USER, EMAIL_PASS } = process.env;
 
 module.exports.saveTempData = async (req, res) => {
@@ -28,7 +30,6 @@ module.exports.saveTempData = async (req, res) => {
             createdAt,
             totalAmount
         });
-        console.log(booking);
         res
             .status(201)
             .json({ message: "Pre book success", success: true, booking });
@@ -42,11 +43,9 @@ module.exports.totalPrice = async (req, res) => {
     try {
         const { id } = req.params;
         const fetchUser = await Booking.findOne({ userId: id });
-        console.log(fetchUser);
         if (!fetchUser) {
             return res.status(404).json({ message: "Pre Booking not found", success: false });
         }
-        console.log(fetchUser);
         res.status(200).json({ message: "Total Price is complete", success: true, booking: fetchUser });
     } catch (error) {
         console.error("Error fetching booking:", error);
@@ -104,6 +103,14 @@ module.exports.cancelBooking = async (req, res) => {
         if (deleteBooking.deletedCount === 0) {
             return res.status(400).json({ message: "Failed to delete booking" });
         }
+        const invoiceFilePath = path.join(__dirname, '../invoices', `invoice_${id}.pdf`);
+        fs.unlink(invoiceFilePath, (err) => {
+            if (err) {
+                console.error(`Failed to delete invoice file: invoices_${id}.pdf`, err);
+            } else {
+                console.log(`Successfully deleted invoice file: invoices_${id}.pdf`);
+            }
+        });
         const sendCancelEmail = async () => {
             const transporter = nodemailer.createTransport({
                 service: 'Gmail',
@@ -220,7 +227,6 @@ module.exports.updateBooking = async (req, res) => {
         // if (!vehicle) {
         //     return res.status(404).json({ message: "Vehicle not found" });
         // }
-        console.log(vehicle, "Vehicle data after update");
         res.status(200).json({
             message: "Booking updated successfully",
             bookingInfo: bookVehicle
@@ -230,45 +236,6 @@ module.exports.updateBooking = async (req, res) => {
         res.status(500).json({ message: "Internal Server Error", error: error.message });
     }
 };
-
-// module.exports.getDashboardData = async (req, res) => {
-//     try {
-//         const { id } = req.params;
-//         let dashboardData = {};
-//         const bookingDetails = await Booking.find({ userId: id });
-
-//         console.log(bookingDetails, "Booking details");
-//         const bookingArr = [];
-//         const paymentArr = [];
-//         let vehicleObj = {};
-//         for (const booking of bookingDetails) {
-//             const bookingId = booking._id;
-//             const paymentDetails = await Payment.find({ bookingId: bookingId });
-//             console.log(paymentDetails, "Payment details");
-//             const vehicleDetail = await Vehicle.findById({ _id: booking.vehicleId });
-//             paymentArr.push(paymentDetails);
-//             bookingArr.push({
-//                 ...booking._doc,
-//                 bookingId: booking._id
-//             });
-//             vehicleObj = {
-//                 ...vehicleDetail?._doc
-//             }
-//         }
-//         dashboardData = {
-//             bookingDetails: bookingArr,
-//             paymentDetails: paymentArr,
-//             vehicleObj
-//         };
-//         res.status(200).json({
-//             message: "Data fetched successfully",
-//             dashboardData
-//         });
-//     } catch (error) {
-//         console.error("Error fetching booking details:", error);
-//         res.status(500).json({ message: "Internal Server Error", error: error.message });
-//     }
-// };
 
 module.exports.getDashboardData = async (req, res) => {
     try {
