@@ -50,9 +50,9 @@ This **Vehicle Renting System** named **ORS** is a full-stack MERN application t
   
 ---
 
-## Validation, Table and Packages
-- Validations has been done using Formik and Yup.
-- AGgrid cummunity is used for tables (example: For listing past bookings and for admin access).
-- Nodemailer is used to send mails.
-- Pdfkit is used to generate Invoices.
+### Validation, Table, and Packages
 
+- Formik & Yup: Schema-based form validation across user authentication, booking forms, and profile updates ensures that user input is secure and accurate.
+- AGgrid Community: Provides advanced features like sorting, filtering, and pagination for displaying data-rich tables, such as past bookings and admin panels.
+- Nodemailer: Automated email handling for booking confirmations, cancellations, and payment notifications using a secure mail configuration.
+- Pdfkit: Dynamically generates PDF invoices based on booking details, providing users with downloadable receipts.
