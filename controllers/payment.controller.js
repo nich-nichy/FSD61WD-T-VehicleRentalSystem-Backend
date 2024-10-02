@@ -1,30 +1,46 @@
 const Payment = require('../models/payment.model');
 const Vehicle = require('../models/vehicle.model');
 const User = require('../models/users.model');
+const Invoice = require('../models/invoice.model.js');
 const { generateAccessToken } = require('../utils/paypal.js');
 const axios = require('axios');
 const nodemailer = require('nodemailer');
 const PDFDocument = require('pdfkit');
-const fs = require('fs');
-const path = require('path');
 
 const generateInvoice = async (bookingData, amount) => {
-    const doc = new PDFDocument();
-    const filePath = `./invoices/invoice_${bookingData.bookingId}.pdf`;
-    doc.pipe(fs.createWriteStream(filePath));
-    doc.fontSize(20).text('Invoice', { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(12).text(`Booking ID: ${bookingData.bookingId}`);
-    doc.text(`User Name: ${bookingData?.user.username ? bookingData?.user.username : 'ORS User'}`);
-    doc.text(`Vehicle: ${bookingData?.vehicle.make}`);
-    doc.text(`Model: ${bookingData?.vehicle.model}, Type: ${bookingData?.vehicle.type}`);
-    doc.text(`Amount: ${amount}`);
-    doc.text(`Payment type: Paypal`);
-    doc.text(`Booked on: ${new Date().toLocaleDateString()}`);
-    doc.moveDown();
-    doc.text('Thank you for renting with ORS!', { align: 'center' });
-    doc.end();
-    return filePath;
+    return new Promise((resolve, reject) => {
+        const doc = new PDFDocument();
+        const chunks = [];
+        doc.on('data', (chunk) => {
+            chunks.push(chunk);
+        });
+        doc.on('end', async () => {
+            const pdfBuffer = Buffer.concat(chunks);
+            const newInvoice = new Invoice({
+                bookingId: bookingData.bookingId,
+                invoiceData: pdfBuffer,
+            });
+
+            try {
+                const savedInvoice = await newInvoice.save();
+                resolve(savedInvoice);
+            } catch (error) {
+                reject(error);
+            }
+        });
+        doc.fontSize(20).text('Invoice', { align: 'center' });
+        doc.moveDown();
+        doc.fontSize(12).text(`Booking ID: ${bookingData.bookingId}`);
+        doc.text(`User Name: ${bookingData?.user?.username || 'ORS User'}`);
+        doc.text(`Vehicle: ${bookingData?.vehicle?.make}`);
+        doc.text(`Model: ${bookingData?.vehicle?.model}, Type: ${bookingData?.vehicle?.type}`);
+        doc.text(`Amount: ${amount}`);
+        doc.text(`Payment type: Paypal`);
+        doc.text(`Booked on: ${new Date().toLocaleDateString()}`);
+        doc.moveDown();
+        doc.text('Thank you for renting with ORS!', { align: 'center' });
+        doc.end();
+    });
 };
 
 module.exports.getAccessToken = async (req, res) => {
@@ -105,26 +121,24 @@ module.exports.bookVehicle = async (req, res) => {
 module.exports.capturePayment = async (req, res) => {
     try {
         const { orderId, bookingData } = req.body;
-        const accessToken = await generateAccessToken()
-        const vehicleDetails = await Vehicle.findById({ _id: bookingData?.vehicleId })
-        const userDetails = await User.findById({ _id: bookingData?.userId })
-        let invoiceObj = {
+        const accessToken = await generateAccessToken();
+        const vehicleDetails = await Vehicle.findById(bookingData.vehicleId);
+        const userDetails = await User.findById(bookingData.userId);
+        const invoiceObj = {
             ...bookingData,
-            vehicle: {
-                ...vehicleDetails?._doc
-            },
-            user: {
-                ...userDetails?._doc
-            }
+            vehicle: vehicleDetails.toObject(),
+            user: userDetails.toObject(),
         };
-        const response = await axios({
-            url: process.env.PAYPAL_BASE + `/v2/checkout/orders/${orderId}/capture`,
-            method: 'post',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + accessToken
+        const response = await axios.post(
+            `${process.env.PAYPAL_BASE}/v2/checkout/orders/${orderId}/capture`,
+            {},
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
             }
-        })
+        );
         const paymentStatus = await Payment.findOne({ bookingId: bookingData.bookingId });
         if (!paymentStatus) {
             try {
@@ -137,6 +151,7 @@ module.exports.capturePayment = async (req, res) => {
                         paymentMethod: 'Paypal',
                         paymentStatus: response.data ? true : false,
                     });
+                    const savedInvoice = await generateInvoice(invoiceObj, bookingData.totalAmount);
                     const transporter = nodemailer.createTransport({
                         service: 'Gmail',
                         auth: {
@@ -145,11 +160,11 @@ module.exports.capturePayment = async (req, res) => {
                         },
                     });
                     await transporter.sendMail({
-                        to: bookingData?.email,
+                        to: bookingData.email,
                         from: process.env.EMAIL_USER,
                         subject: 'ORS - Your rental partner',
                         html: `
-                    <p>Hello ${invoiceObj?.user.username}!</p>
+                    <p>Hello ${invoiceObj.user.username}!</p>
                     <p>You have rented the car. Please find the invoice attached.</p>
                     <p>Thanks and regards - Team ORS</p>
                     <span>Note: All the amounts and credentials are samples for development purposes.</span>
@@ -157,48 +172,43 @@ module.exports.capturePayment = async (req, res) => {
                         attachments: [
                             {
                                 filename: `invoice_${bookingData.bookingId}.pdf`,
-                                content: invoice,
+                                content: savedInvoice.invoiceData,
                             },
                         ],
                     });
-                    const invoice = await generateInvoice(invoiceObj, bookingData?.totalAmount);
                     res.status(200).json({
                         message: 'Payment captured successfully', savePayment,
                     });
+                } else {
+                    res.status(404).json({
+                        message: 'There is a issue',
+                        error: error.response ? error.response.data : error.message
+                    });
                 }
             } catch (error) {
-                res.status(500).json({
+                res.status(404).json({
                     message: 'Failed to create PayPal order',
                     error: error.response ? error.response.data : error.message
                 });
             }
-
-        } else {
-            res.status(200).json({
-                message: 'Already paid',
-            });
         }
     } catch (error) {
-        console.error('Error creating PayPal order:', error.response ? error.response.data : error);
-        res.status(500).json({
-            message: 'Failed to create PayPal order',
-            error: error.response ? error.response.data : error.message
-        });
+        console.error('Error capturing payment:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 }
 
 module.exports.getInvoice = async (req, res) => {
     try {
         const { bookingId } = req.body;
-        const invoicePath = path.join(__dirname, '../invoices', `invoice_${bookingId}.pdf`);
+        const invoice = await Invoice.findOne({ bookingId });
+        if (!invoice) {
+            return res.status(404).json({ message: 'Invoice not found' });
+        }
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=invoice_${bookingId}.pdf`);
-        res.sendFile(invoicePath);
+        res.send(invoice.invoiceData);
     } catch (error) {
-        console.error('Error sending invoice:', error);
-        res.status(500).json({
-            message: 'Error sending invoice',
-            error: error.message
-        });
+        res.status(500).json({ message: 'Error retrieving invoice', error });
     }
 };

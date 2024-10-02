@@ -103,14 +103,7 @@ module.exports.cancelBooking = async (req, res) => {
         if (deleteBooking.deletedCount === 0) {
             return res.status(400).json({ message: "Failed to delete booking" });
         }
-        const invoiceFilePath = path.join(__dirname, '../invoices', `invoice_${id}.pdf`);
-        fs.unlink(invoiceFilePath, (err) => {
-            if (err) {
-                console.error(`Failed to delete invoice file: invoices_${id}.pdf`, err);
-            } else {
-                console.log(`Successfully deleted invoice file: invoices_${id}.pdf`);
-            }
-        });
+
         const sendCancelEmail = async () => {
             const transporter = nodemailer.createTransport({
                 service: 'Gmail',
